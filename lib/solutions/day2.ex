@@ -3,23 +3,31 @@ defmodule Aoc.Solutions.Day2 do
 
   @impl true
   def execute(input) do
-    input
-    |> String.split(",")
-    |> Enum.map(&String.to_integer/1)
-    # Set noun and verb
-    |> List.replace_at(1, 12)
-    |> List.replace_at(2, 2)
-    |> run_machine(0)
+    try do
+      input
+      |> String.split(",")
+      |> Enum.map(&String.to_integer/1)
+      |> try_nouns_and_verbs()
+    catch
+      value -> value
+    else
+      _ -> "Didn't find anything"
+    end
   end
 
-  defp try_nouns(initial_memory) do
-    nil
+  defp try_nouns_and_verbs(initial_memory) do
+    for noun <- 0..99,
+        verb <- 0..99,
+        memory = List.replace_at(initial_memory, 1, noun),
+        memory = List.replace_at(memory, 2, verb),
+        output =
+          run_machine(memory, 0) |> IO.inspect(label: "Noun: #{noun}; Verb: #{verb}; Got:"),
+        output == 19_690_720 do
+      throw(100 * noun + verb)
+    end
   end
 
   defp run_machine(memory, pc) do
-    IO.inspect(pc, label: "Program Counter")
-    IO.inspect(memory, label: "Memory")
-
     memory
     |> Enum.at(pc)
     |> case do
