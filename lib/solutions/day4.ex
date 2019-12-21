@@ -18,9 +18,18 @@ defmodule Aoc.Solutions.Day4 do
 
   defp check_criteria(password), do: check_duplicates(password) and check_increasing(password)
 
-  defp check_duplicates(<<x, y, _rest::binary>>) when x == y, do: true
-  defp check_duplicates(<<_x, rest::binary>>), do: check_duplicates(rest)
-  defp check_duplicates(<<>>), do: false
+  defp check_duplicates(password) do
+    password
+    |> String.graphemes()
+    |> Enum.reduce([], fn
+      # Increment count if head char is current char
+      val, [{other, count} | rest] when val == other -> [{val, count + 1} | rest]
+      # Prepend new value
+      val, [] -> [{val, 1}]
+      val, acc -> [{val, 1} | acc]
+    end)
+    |> Enum.any?(fn {_val, count} -> count == 2 end)
+  end
 
   defp check_increasing(<<x, y, rest::binary>>) when x <= y, do: check_increasing(<<y>> <> rest)
   defp check_increasing(<<_x>>), do: true
