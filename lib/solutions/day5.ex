@@ -72,21 +72,21 @@ defmodule Aoc.Solutions.Day5 do
     {memory, 1}
   end
 
-  # If arg1 is non-zero, jump to arg2
-  defp execute_opcode(memory, 5, [{_, 0}, {_dst, _}]), do: {memory, 2}
-  defp execute_opcode(memory, 5, [{_, _}, {dest, _}]), do: {memory, :jump, dest}
+  # Jump-if-true; If arg1 is non-zero, jump to arg2
+  defp execute_opcode(memory, 5, [{_, 0}, {_, _dst}]), do: {memory, 2}
+  defp execute_opcode(memory, 5, [{_, _}, {_, dest}]), do: {memory, :jump, dest}
 
-  # If arg1 is zero, jump to arg2
-  defp execute_opcode(memory, 6, [{_, 0}, {dest, _}]), do: {memory, :jump, dest}
-  defp execute_opcode(memory, 6, [{_, _}, {_dst, _}]), do: {memory, 2}
+  # Jump-if-false; If arg1 is zero, jump to arg2
+  defp execute_opcode(memory, 6, [{_, 0}, {_, dest}]), do: {memory, :jump, dest}
+  defp execute_opcode(memory, 6, [{_, _}, {_, _dst}]), do: {memory, 2}
 
-  # If arg1 < arg2, 1 -> arg3
+  # Less-than; If arg1 < arg2, 1 -> arg3
   defp execute_opcode(memory, 7, [{_, left}, {_, right}, {out, _}]) do
     value = if left < right, do: 1, else: 0
     {store(memory, out, value), 3}
   end
 
-  # If arg1 == arg2, 1 -> arg3
+  # Equal; If arg1 == arg2, 1 -> arg3
   defp execute_opcode(memory, 8, [{_, left}, {_, right}, {out, _}]) do
     value = if left == right, do: 1, else: 0
     {store(memory, out, value), 3}
