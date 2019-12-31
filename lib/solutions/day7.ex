@@ -9,28 +9,35 @@ defmodule Aoc.Solutions.Day7 do
   end
 
   defp find_best_sequence(machine) do
-    for seq <- permutations(Enum.to_list(0..4)) do
-      run_with_sequence(machine, 0, seq)
+    for seq <- permutations(Enum.to_list(5..9)) do
+      run_with_sequence(machine, seq)
     end
-    |> Enum.map(&String.trim/1)
-    |> Enum.map(&String.to_integer/1)
     |> Enum.max()
   end
 
-  defp run_with_sequence(machine, input, [phase]), do: run_with_phase(input, machine, phase)
+  defp run_with_sequence(machine, seq) do
+    pids = Enum.map(seq, &start_machine(machine, &1))
 
-  defp run_with_sequence(machine, input, [phase | tail]),
-    do: run_with_sequence(machine, run_with_phase(input, machine, phase), tail)
+    run_machines(pids, 0)
+  end
 
-  defp run_with_phase(input, machine, phase) do
-    {:ok, device} = StringIO.open("#{phase}\n#{input}\n")
+  defp run_machines([], value), do: value
 
-    IntcodeMachine.run(machine, device)
+  defp run_machines([pid | tail], value) do
+    send(pid, {:input, value})
 
-    {_, output} = StringIO.contents(device)
-    StringIO.close(device)
+    receive do
+      {:display, value} -> run_machines(tail ++ [pid], value)
+      {:halted, ^pid} -> run_machines(tail, value)
+    end
+  end
 
-    output
+  defp start_machine(machine, phase) do
+    parent = self()
+    pid = spawn_link(fn -> send(parent, {IntcodeMachine.run(machine, parent), self()}) end)
+    send(pid, {:input, phase})
+
+    pid
   end
 
   # From https://stackoverflow.com/a/33756397

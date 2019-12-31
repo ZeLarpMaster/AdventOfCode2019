@@ -1,8 +1,6 @@
 defmodule IntcodeMachine do
   # pc = Program Counter
-  # in = INput device
-  # out = OUTput device
-  defstruct [:memory, pc: 0, device: :stdio]
+  defstruct [:memory, pc: 0, io_pid: nil]
 
   @opcodes %{
     1 => 3,
@@ -28,9 +26,8 @@ defmodule IntcodeMachine do
     %IntcodeMachine{memory: memory}
   end
 
-  def run(machine, device) do
-    machine
-    |> Map.replace!(:device, device)
+  def run(machine, io_pid) do
+    %IntcodeMachine{machine | io_pid: io_pid}
     |> run()
   end
 
@@ -67,18 +64,29 @@ defmodule IntcodeMachine do
   end
 
   # Input; stdin -> arg1
-  defp execute_opcode(machine, 3, [{address, _}]) do
+  defp execute_opcode(%{io_pid: nil} = machine, 3, [{address, _}]) do
     value =
-      IO.read(machine.device, :line)
+      IO.read(:line)
       |> String.trim()
       |> String.to_integer()
 
     {store(machine, address, value), 1}
   end
 
+  defp execute_opcode(%{io_pid: _pid} = machine, 3, [{address, _}]) do
+    receive do
+      {:input, value} -> {store(machine, address, value), 1}
+    end
+  end
+
   # Output; arg1 -> stdout
-  defp execute_opcode(machine, 4, [{_, value}]) do
-    IO.puts(machine.device, value)
+  defp execute_opcode(%{io_pid: nil} = machine, 4, [{_, value}]) do
+    IO.puts(value)
+    {machine, 1}
+  end
+
+  defp execute_opcode(%{io_pid: pid} = machine, 4, [{_, value}]) do
+    send(pid, {:display, value})
     {machine, 1}
   end
 
