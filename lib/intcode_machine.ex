@@ -1,6 +1,7 @@
 defmodule IntcodeMachine do
   # pc = Program Counter
-  defstruct [:memory, pc: 0, io_pid: nil]
+  # rb = Relative Base
+  defstruct [:memory, pc: 0, io_pid: nil, rb: 0]
 
   @opcodes %{
     1 => 3,
@@ -11,6 +12,7 @@ defmodule IntcodeMachine do
     6 => 2,
     7 => 3,
     8 => 3,
+    9 => 1,
     99 => 0
   }
 
@@ -32,14 +34,14 @@ defmodule IntcodeMachine do
   end
 
   def run(machine) do
-    {opcode, modes} = machine |> load(:relative, 0) |> parse_opcode()
+    {opcode, modes} = machine |> load(:param, 0) |> parse_opcode()
 
     parameters =
       modes
       |> Enum.with_index(1)
       |> Enum.map(fn {mode, i} ->
         machine
-        |> load(:relative, i)
+        |> load(:param, i)
         |> fetch_param(mode, machine)
       end)
 
@@ -110,6 +112,11 @@ defmodule IntcodeMachine do
     {store(machine, out, value), 3}
   end
 
+  # Move relative base; rb += arg1
+  defp execute_opcode(machine, 9, [{_, offset}]) do
+    {move_base(machine, offset), 1}
+  end
+
   # Halts the machine
   defp execute_opcode(machine, 99, _args) do
     {machine, :halt}
@@ -119,6 +126,9 @@ defmodule IntcodeMachine do
 
   defp fetch_param(param, :immediate, _machine), do: {param, param}
   defp fetch_param(param, :indirect, machine), do: {param, load(machine, :absolute, param)}
+
+  defp fetch_param(param, :relative, machine),
+    do: {machine.rb + param, load(machine, :relative, param)}
 
   defp parse_opcode(opcode) do
     op = rem(opcode, 100)
@@ -132,6 +142,7 @@ defmodule IntcodeMachine do
       |> Enum.map(fn
         0 -> :indirect
         1 -> :immediate
+        2 -> :relative
       end)
 
     {op, modes}
@@ -139,12 +150,15 @@ defmodule IntcodeMachine do
 
   defp jump(machine, new_pc), do: Map.replace!(machine, :pc, new_pc)
   defp increment_pc(machine, offset), do: Map.update!(machine, :pc, &(&1 + offset))
+  defp move_base(machine, offset), do: Map.update!(machine, :rb, &(&1 + offset))
 
-  defp load(machine, :relative, address), do: Map.fetch!(machine.memory, machine.pc + address)
-  defp load(machine, :absolute, address), do: Map.fetch!(machine.memory, address)
+  defp load(machine, address), do: Map.get(machine.memory, address, 0)
+  defp load(machine, :param, address), do: load(machine, machine.pc + address)
+  defp load(machine, :absolute, address), do: load(machine, address)
+  defp load(machine, :relative, address), do: load(machine, machine.rb + address)
 
   defp store(machine, address, value),
-    do: Map.update!(machine, :memory, &Map.replace!(&1, address, value))
+    do: Map.update!(machine, :memory, &Map.put(&1, address, value))
 
   defp pad_list(_, _, count) when count <= 0, do: []
 
