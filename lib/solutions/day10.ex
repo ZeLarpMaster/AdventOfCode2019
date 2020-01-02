@@ -9,11 +9,40 @@ defmodule Aoc.Solutions.Day10 do
       |> Enum.map(&String.graphemes/1)
       |> setify(0)
 
-    count_asteroids(asteroid_set, MapSet.to_list(asteroid_set), %{})
-    |> Map.to_list()
-    |> Enum.max_by(fn {_, count} -> count end)
-    |> elem(1)
+    location =
+      count_asteroids(asteroid_set, MapSet.to_list(asteroid_set), %{})
+      |> Map.to_list()
+      |> Enum.max_by(fn {_, count} -> count end)
+      |> elem(0)
+
+    asteroid_set
+    |> MapSet.delete(location)
+    |> vaporize(location)
+    |> Enum.at(199)
+    |> output()
   end
+
+  defp output({x, y}), do: x * 100 + y
+
+  defp vaporize(asteroid_set, {cx, cy}) do
+    asteroid_set
+    |> Enum.map(fn {x, y} -> {{x, y}, angle(cx - x, cy - y), dist(cx - x, cy - y)} end)
+    |> Enum.group_by(fn {_, angle, _} -> angle end)
+    |> Map.values()
+    |> Enum.map(&Enum.sort_by(&1, fn {_, _, dist} -> dist end))
+    |> Enum.map(&Enum.with_index/1)
+    |> Enum.map(
+      &Enum.map(&1, fn {{pos, ang, _}, index} -> {pos, ang + index * :math.pi() * 2} end)
+    )
+    |> Enum.concat()
+    |> Enum.sort_by(fn {_, ang} -> ang end)
+    |> Enum.map(&elem(&1, 0))
+  end
+
+  defp angle(x, y), do: angle(-:math.atan2(x, y))
+  defp angle(a) when a < 0, do: a + 2 * :math.pi()
+  defp angle(a), do: a
+  defp dist(x, y), do: :math.pow(x, 2) + :math.pow(y, 2)
 
   defp count_asteroids(_, [], counter), do: counter
 
