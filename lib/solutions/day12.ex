@@ -14,8 +14,26 @@ defmodule Aoc.Solutions.Day12 do
     |> Enum.map(&String.split(&1, ", "))
     |> Enum.map(&parse_position/1)
     |> Enum.map(fn pos -> {struct(Vector, pos), %Vector{}} end)
-    |> simulate(1000)
-    |> total_energy()
+    |> find_cycle()
+    |> lcm()
+
+    # Part 1
+    # |> simulate(1000)
+    # |> total_energy()
+  end
+
+  defp find_cycle(state), do: find_cycle(state, state, {1, -1, -1, -1})
+
+  defp find_cycle(_, _, {_, x, y, z}) when x != -1 and y != -1 and z != -1, do: [x, y, z]
+
+  defp find_cycle(state, initial, {step, x, y, z}) do
+    new_state = simulate(state, 1)
+
+    x_step = if new_state.x == initial.x and x == -1, do: step, else: x
+    y_step = if new_state.y == initial.y and y == -1, do: step, else: y
+    z_step = if new_state.z == initial.z and z == -1, do: step, else: z
+
+    find_cycle(new_state, initial, {step + 1, x_step, y_step, z_step})
   end
 
   defp simulate(list, 0), do: list
@@ -55,6 +73,9 @@ defmodule Aoc.Solutions.Day12 do
   defp compare(pos1, pos2) when pos1 > pos2, do: -1
   defp compare(pos1, pos2) when pos1 < pos2, do: 1
   defp compare(pos1, pos2) when pos1 == pos2, do: 0
+
+  defp lcm([num1, num2]), do: num1 * num2 / Integer.gcd(num1, num2)
+  defp lcm([head | tail]), do: lcm([head, lcm(tail)])
 
   defp total_energy([]), do: 0
   defp total_energy([{pos, vel} | tail]), do: sum(pos) * sum(vel) + total_energy(tail)
